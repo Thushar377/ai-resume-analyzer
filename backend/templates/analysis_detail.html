@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Analysis Results - ResumeAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-indigo-900 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/dashboard" class="text-2xl font-bold">🤖 ResumeAI</a>
+                    <div class="hidden md:flex space-x-6">
+                        <a href="/dashboard" class="hover:text-indigo-300">📊 Dashboard</a>
+                        <a href="/upload" class="hover:text-indigo-300">📤 Upload</a>
+                        <a href="/analyze" class="hover:text-indigo-300">🤖 Analyze</a>
+                        <a href="/analyses" class="hover:text-indigo-300">📋 History</a>
+                    </div>
+                </div>
+                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <button onclick="history.back()" class="text-gray-600 hover:text-gray-800 mb-4">← Back</button>
+
+        <div id="loading" class="text-center py-20">
+            <div class="text-6xl mb-4">🤖</div>
+            <h2 class="text-2xl font-bold text-gray-800">AI is Analyzing Your Resume</h2>
+            <p class="text-gray-600 mt-2">This usually takes 10-30 seconds...</p>
+            <div class="mt-6 inline-block w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        </div>
+
+        <div id="results" class="hidden">
+            <!-- Header -->
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">Analysis Results 📊</h1>
+                <p id="jobInfo" class="text-gray-600"></p>
+            </div>
+
+            <!-- Score Card -->
+            <div id="scoreCard" class="bg-white rounded-xl shadow-lg p-8 mb-6 flex items-center gap-6">
+                <div class="text-center">
+                    <div id="scoreNum" class="text-7xl font-bold">0%</div>
+                    <div class="text-gray-500 text-sm">Match Score</div>
+                </div>
+                <div>
+                    <h2 id="scoreTitle" class="text-2xl font-bold mb-2">Analyzing...</h2>
+                    <p id="scoreDesc" class="text-gray-600"></p>
+                </div>
+            </div>
+
+            <!-- Skills Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-green-50 rounded-xl p-6 shadow">
+                    <h3 class="font-bold text-lg mb-3">✅ Matched Skills</h3>
+                    <div id="matchedSkills" class="flex flex-wrap gap-2"></div>
+                </div>
+                <div class="bg-red-50 rounded-xl p-6 shadow">
+                    <h3 class="font-bold text-lg mb-3">❌ Missing Skills</h3>
+                    <div id="missingSkills" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Strengths & Weaknesses -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white rounded-xl p-6 shadow">
+                    <h3 class="font-bold text-lg mb-3">💪 Strengths</h3>
+                    <ul id="strengths" class="space-y-2"></ul>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow">
+                    <h3 class="font-bold text-lg mb-3">📈 Areas to Improve</h3>
+                    <ul id="weaknesses" class="space-y-2"></ul>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="bg-white rounded-xl p-6 shadow mb-6">
+                <h3 class="font-bold text-lg mb-3">🚀 AI Recommendations</h3>
+                <div id="recommendations" class="space-y-3"></div>
+            </div>
+
+            <!-- AI Feedback -->
+            <div class="bg-purple-50 rounded-xl p-6 shadow mb-6">
+                <h3 class="font-bold text-lg mb-3">🤖 Detailed AI Feedback</h3>
+                <p id="aiFeedback" class="text-gray-700 whitespace-pre-wrap"></p>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-4">
+                <a href="/analyze" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold">
+                    🔄 Analyze Another Job
+                </a>
+                <a href="/dashboard" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold">
+                    📊 Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script>
+        requireAuth();
+        const analysisId = parseInt(window.location.pathname.split('/').pop());
+
+        async function loadAnalysis() {
+            try {
+                const data = await apiCall('/analyses/' + analysisId);
+                
+                if (data.status === 'pending' || data.status === 'processing') {
+                    setTimeout(loadAnalysis, 3000);
+                    return;
+                }
+                
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('results').classList.remove('hidden');
+                
+                // Job info
+                let info = '';
+                if (data.job_title) info += data.job_title;
+                if (data.company_name) info += ' at ' + data.company_name;
+                document.getElementById('jobInfo').textContent = info;
+                
+                // Score
+                const score = Math.round(data.match_score);
+                const scoreColor = score >= 70 ? 'text-green-600' : score >= 50 ? 'text-yellow-600' : 'text-red-600';
+                const borderColor = score >= 70 ? 'border-green-500' : score >= 50 ? 'border-yellow-500' : 'border-red-500';
+                
+                document.getElementById('scoreNum').textContent = score + '%';
+                document.getElementById('scoreNum').className = `text-7xl font-bold ${scoreColor}`;
+                document.getElementById('scoreCard').className = `bg-white rounded-xl shadow-lg p-8 mb-6 flex items-center gap-6 border-t-4 ${borderColor}`;
+                
+                if (score >= 70) {
+                    document.getElementById('scoreTitle').textContent = '🎉 Strong Match!';
+                    document.getElementById('scoreDesc').textContent = 'Your resume is well-aligned with this position!';
+                } else if (score >= 50) {
+                    document.getElementById('scoreTitle').textContent = '👍 Good Match';
+                    document.getElementById('scoreDesc').textContent = 'You have many of the required skills.';
+                } else {
+                    document.getElementById('scoreTitle').textContent = '⚠️ Needs Improvement';
+                    document.getElementById('scoreDesc').textContent = 'Significant skill gaps identified.';
+                }
+                
+                // Skills
+                document.getElementById('matchedSkills').innerHTML = data.matched_skills.length > 0
+                    ? data.matched_skills.map(s => `<span class="bg-green-200 text-green-800 px-3 py-1 rounded-full text-sm">${s}</span>`).join('')
+                    : '<p class="text-gray-500">None identified</p>';
+                
+                document.getElementById('missingSkills').innerHTML = data.missing_skills.length > 0
+                    ? data.missing_skills.map(s => `<span class="bg-red-200 text-red-800 px-3 py-1 rounded-full text-sm">${s}</span>`).join('')
+                    : '<p class="text-gray-500">No major gaps!</p>';
+                
+                // Strengths
+                document.getElementById('strengths').innerHTML = data.strengths.length > 0
+                    ? data.strengths.map(s => `<li class="flex gap-2"><span class="text-green-500 font-bold">•</span> ${s}</li>`).join('')
+                    : '<li class="text-gray-500">None identified</li>';
+                
+                // Weaknesses
+                document.getElementById('weaknesses').innerHTML = data.weaknesses.length > 0
+                    ? data.weaknesses.map(s => `<li class="flex gap-2"><span class="text-red-500 font-bold">•</span> ${s}</li>`).join('')
+                    : '<li class="text-gray-500">None identified</li>';
+                
+                // Recommendations
+                document.getElementById('recommendations').innerHTML = data.recommendations.map((r, i) => `
+                    <div class="flex gap-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                        <span class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">${i+1}</span>
+                        <p>${r}</p>
+                    </div>
+                `).join('');
+                
+                // AI Feedback
+                document.getElementById('aiFeedback').textContent = data.ai_feedback || 'No detailed feedback available.';
+                
+            } catch (error) {
+                document.getElementById('loading').innerHTML = '<p class="text-red-600">Failed to load analysis</p>';
+            }
+        }
+
+        loadAnalysis();
+    </script>
+</body>
+</html>
+
+

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Analysis History - ResumeAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-indigo-900 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/dashboard" class="text-2xl font-bold">🤖 ResumeAI</a>
+                    <div class="hidden md:flex space-x-6">
+                        <a href="/dashboard" class="hover:text-indigo-300">📊 Dashboard</a>
+                        <a href="/upload" class="hover:text-indigo-300">📤 Upload</a>
+                        <a href="/analyze" class="hover:text-indigo-300">🤖 Analyze</a>
+                        <a href="/analyses" class="hover:text-indigo-300 font-bold">📋 History</a>
+                    </div>
+                </div>
+                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">📋 Analysis History</h1>
+        
+        <div id="analysesList" class="space-y-4">
+            <p class="text-gray-500 text-center py-8">Loading...</p>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script>
+        requireAuth();
+
+        async function loadAnalyses() {
+            try {
+                const analyses = await apiCall('/analyses/');
+                const container = document.getElementById('analysesList');
+                
+                if (analyses.length === 0) {
+                    container.innerHTML = `
+                        <div class="bg-white rounded-xl shadow p-12 text-center">
+                            <div class="text-6xl mb-4">📋</div>
+                            <h3 class="text-xl font-bold mb-2">No analyses yet</h3>
+                            <p class="text-gray-600 mb-4">Start by analyzing a job match</p>
+                            <a href="/analyze" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg">
+                                Analyze Now
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = analyses.map(a => {
+                    const score = Math.round(a.match_score);
+                    const scoreColor = score >= 70 ? 'text-green-600' : score >= 50 ? 'text-yellow-600' : 'text-red-600';
+                    const statusBadge = a.status === 'completed' 
+                        ? '<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">✓ Completed</span>'
+                        : a.status === 'processing'
+                        ? '<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">⏳ Processing</span>'
+                        : '<span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">Pending</span>';
+                    
+                    return `
+                        <a href="/analysis/${a.id}" class="block bg-white rounded-xl shadow hover:shadow-lg transition p-6">
+                            <div class="flex justify-between items-center">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3 class="text-lg font-bold">${a.job_title || 'Job Analysis'}</h3>
+                                        ${statusBadge}
+                                    </div>
+                                    <p class="text-gray-600">${a.company_name || 'No company specified'}</p>
+                                    <p class="text-sm text-gray-500 mt-1">${new Date(a.created_at).toLocaleString()}</p>
+                                </div>
+                                <div class="text-center ml-4">
+                                    <div class="text-4xl font-bold ${scoreColor}">${score}%</div>
+                                    <div class="text-xs text-gray-500">Match</div>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                }).join('');
+            } catch (error) {
+                document.getElementById('analysesList').innerHTML = '<p class="text-red-600">Failed to load analyses</p>';
+            }
+        }
+
+        loadAnalyses();
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<nav class="bg-indigo-900 text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between items-center h-16">
+            <div class="flex items-center space-x-8">
+                <a href="/dashboard" class="text-2xl font-bold">🤖 ResumeAI</a>
+                <div class="hidden md:flex space-x-6">
+                    <a href="/dashboard" class="hover:text-indigo-300 transition">📊 Dashboard</a>
+                    <a href="/upload" class="hover:text-indigo-300 transition">📤 Upload</a>
+                    <a href="/analyze" class="hover:text-indigo-300 transition">🤖 Analyze</a>
+                    <a href="/analyses" class="hover:text-indigo-300 transition">📋 History</a>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="userName" class="text-sm"></span>
+                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm transition">
+                    🚪 Logout
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>

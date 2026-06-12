@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - ResumeAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-indigo-900 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/dashboard" class="text-2xl font-bold">🤖 ResumeAI</a>
+                    <div class="hidden md:flex space-x-6">
+                        <a href="/dashboard" class="hover:text-indigo-300">📊 Dashboard</a>
+                        <a href="/upload" class="hover:text-indigo-300">📤 Upload</a>
+                        <a href="/analyze" class="hover:text-indigo-300">🤖 Analyze</a>
+                        <a href="/analyses" class="hover:text-indigo-300">📋 History</a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userName" class="text-sm"></span>
+                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Welcome Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">
+                Welcome back, <span id="welcomeName">User</span>! 👋
+            </h1>
+            <p class="text-gray-600">Here's your resume analysis overview</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
+                <div class="text-4xl mb-2">📄</div>
+                <div class="text-3xl font-bold text-blue-600" id="totalResumes">0</div>
+                <div class="text-gray-500 text-sm">Total Resumes</div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow p-6 border-l-4 border-purple-500">
+                <div class="text-4xl mb-2">🔍</div>
+                <div class="text-3xl font-bold text-purple-600" id="totalAnalyses">0</div>
+                <div class="text-gray-500 text-sm">Total Analyses</div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
+                <div class="text-4xl mb-2">🎯</div>
+                <div class="text-3xl font-bold text-green-600"><span id="avgScore">0</span>%</div>
+                <div class="text-gray-500 text-sm">Avg Match Score</div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow p-6 border-l-4 border-yellow-500">
+                <div class="text-4xl mb-2">⚡</div>
+                <div class="text-3xl font-bold text-yellow-600" id="skillCount">0</div>
+                <div class="text-gray-500 text-sm">Skills Detected</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <a href="/upload" class="bg-blue-500 hover:bg-blue-600 text-white rounded-xl p-6 flex items-center space-x-4 transition">
+                <span class="text-4xl">📤</span>
+                <div>
+                    <h3 class="text-xl font-bold">Upload New Resume</h3>
+                    <p class="text-blue-100">Add a PDF or DOCX file</p>
+                </div>
+            </a>
+
+            <a href="/analyze" class="bg-purple-500 hover:bg-purple-600 text-white rounded-xl p-6 flex items-center space-x-4 transition">
+                <span class="text-4xl">🤖</span>
+                <div>
+                    <h3 class="text-xl font-bold">Analyze Job Match</h3>
+                    <p class="text-purple-100">Match resume against job</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- Top Skills -->
+        <div class="bg-white rounded-xl shadow p-6 mb-8" id="skillsSection" style="display: none;">
+            <h2 class="text-xl font-bold mb-4">🚀 Your Top Skills</h2>
+            <div id="skillsList" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Recent Analyses -->
+        <div class="bg-white rounded-xl shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">📊 Recent Analyses</h2>
+                <a href="/analyses" class="text-indigo-600 hover:underline">View All →</a>
+            </div>
+            <div id="recentAnalyses">
+                <p class="text-gray-500 text-center py-8">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script>
+        requireAuth();
+
+        async function loadDashboard() {
+            try {
+                // Get user info
+                const user = await apiCall('/auth/me');
+                document.getElementById('userName').textContent = user.full_name;
+                document.getElementById('welcomeName').textContent = user.full_name.split(' ')[0];
+
+                // Get dashboard stats
+                const stats = await apiCall('/dashboard/stats');
+                
+                document.getElementById('totalResumes').textContent = stats.total_resumes;
+                document.getElementById('totalAnalyses').textContent = stats.total_analyses;
+                document.getElementById('avgScore').textContent = stats.average_match_score;
+                document.getElementById('skillCount').textContent = stats.top_skills.length;
+
+                // Show top skills
+                if (stats.top_skills.length > 0) {
+                    document.getElementById('skillsSection').style.display = 'block';
+                    document.getElementById('skillsList').innerHTML = stats.top_skills.map(skill => 
+                        `<span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`
+                    ).join('');
+                }
+
+                // Show recent analyses
+                const recentDiv = document.getElementById('recentAnalyses');
+                if (stats.recent_analyses.length === 0) {
+                    recentDiv.innerHTML = '<p class="text-gray-500 text-center py-8">No analyses yet. Upload a resume to get started!</p>';
+                } else {
+                    recentDiv.innerHTML = stats.recent_analyses.map(a => `
+                        <div class="border-b border-gray-200 py-4 flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold">${a.job_title || 'Job Analysis'}</p>
+                                <p class="text-sm text-gray-500">${a.company_name || 'Company'} • ${new Date(a.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold ${a.match_score >= 70 ? 'text-green-600' : a.match_score >= 50 ? 'text-yellow-600' : 'text-red-600'}">
+                                        ${Math.round(a.match_score)}%
+                                    </div>
+                                </div>
+                                <a href="/analysis/${a.id}" class="text-indigo-600 hover:underline">View →</a>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                showNotification('Failed to load dashboard', 'error');
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>
